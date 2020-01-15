@@ -1,5 +1,20 @@
 #ifndef SERVER_H
 #define SERVER_H
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <iostream>
+#include <cstddef>
+#include <cerrno>
+#include <stdio.h>
+#include <stdlib.h>
+#include <arpa/inet.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <cstring>
+#include <string>
+#include <sstream>
+#include "ActiveConn.h"
 
 /******************************************************************************************
  * Server - Parent class for student's TCP server
