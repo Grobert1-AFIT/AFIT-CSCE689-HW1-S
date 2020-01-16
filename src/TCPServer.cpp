@@ -1,4 +1,7 @@
 #include "TCPServer.h"
+#include <time.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 TCPServer::TCPServer() {
 
@@ -48,6 +51,21 @@ void TCPServer::bindSvr(const char *ip_addr, short unsigned int port) {
  *    Throws: socket_error for recoverable errors, runtime_error for unrecoverable types
  **********************************************************************************************/
 
+void TCPServer::sendMenu(int socket) {
+	auto message = "Options:\n1: Get Current Time\n2: Kirby!\n3: Random # between 1-100\n4: Echo\n5: Server Hostname\npasswd: future functionality\nmenu: Print this menu\nexit: Disconnect from Server\n";
+	if (send(incoming_conn, message, strlen(message), 0) != strlen(message))
+	{
+		perror("Failure to send menu message");
+	}
+}
+
+void TCPServer::sendText(int socket, char* text) {
+	if (send(incoming_conn, text, strlen(text), 0) != strlen(text))
+	{
+		perror("Failure to send message to client");
+	}
+}
+
 void TCPServer::listenSvr() {
 
 	struct sockaddr_in address;
@@ -88,13 +106,14 @@ void TCPServer::listenSvr() {
 				exit(EXIT_FAILURE);
 			}
 
-			const char* message = "Welcome to the Server\n";
+			const char* message = "Welcome to the Server";
 
 			std::cout << "User connected from IP: " << inet_ntoa(address.sin_addr) << " Port: " << ntohs(address.sin_port) << "\n";
-			if (send(incoming_conn, message, strlen(message), 0) != strlen(message))
+			/*if (send(incoming_conn, message, strlen(message), 0) != strlen(message))
 			{
 				perror("Failure to send welcome message");
 			}
+			*/
 
 			for (int i = 0; i < num_clients; i++)
 			{
@@ -114,26 +133,95 @@ void TCPServer::listenSvr() {
 
 			if (FD_ISSET(latest_conn, &set_of_sockets))
 			{
-				//Client has disconnected
-				if ((read_msg = read(latest_conn, read_buffer, 1024)) == 0)
-				{
-					getpeername(latest_conn, (struct sockaddr*) & address, (socklen_t*)&addrlen);
-					std::cout << "Client disconnected from IP: " << inet_ntoa(address.sin_addr) << " Port: " << ntohs(address.sin_port) <<  "\n",
-					//Close the file descriptor and mark the connection index for re-use
-					close(latest_conn);
-					client_sockets[i] = 0;
-				}
-
-				//We received incoming message from client
-				else
-				{
-					read_buffer[read_msg] = '\0';
-					std::cout << read_buffer;
-				}
+				handleInput(latest_conn, i);
 			}
 		}
 	}
 
+}
+
+void TCPServer::handleInput(int latest_conn, int i) {
+	struct sockaddr_in address;
+	auto addrlen = sizeof(address);
+
+	//Client has disconnected
+	if ((read_msg = read(latest_conn, read_buffer, 1024)) == 0)
+	{
+		getpeername(latest_conn, (struct sockaddr*) & address, (socklen_t*)&addrlen);
+		std::cout << "Client disconnected from IP: " << inet_ntoa(address.sin_addr) << " Port: " << ntohs(address.sin_port) << "\n",
+			//Close the file descriptor and mark the connection index for re-use
+			close(latest_conn);
+		client_sockets[i] = 0;
+	}
+
+	//We received incoming message from client
+	else
+	{
+		char* parsedInput;
+		read_buffer[read_msg] = '\0';
+		//remove newlines from client messages
+		parsedInput = strtok(read_buffer, "\n");
+		while (parsedInput != NULL) {
+			if (strcmp(parsedInput, "hello\n") == 0)
+			{
+				sendText(latest_conn, "Welcome to the Server");
+			}
+			else if (strcmp(parsedInput, "1") == 0)
+			{
+				time_t mytime = time(NULL);
+				char* time_str = ctime(&mytime);
+				time_str[strlen(time_str) - 1] = '\0';
+				sendText(latest_conn, time_str);
+			}
+			else if (strcmp(parsedInput, "2") == 0)
+			{
+				sendText(latest_conn, "<(^^)>");
+			}
+			else if (strcmp(parsedInput, "3") == 0)
+			{
+				srand(time(NULL));
+				int randomNumber = rand() % 100 + 1;
+				//gross code to convernt int to char*
+				std::stringstream ss;
+				ss << randomNumber;
+				std::string str = ss.str();
+				char* random = new char[str.length() + 1];
+				strcpy(random, str.c_str());
+				sendText(latest_conn, random);
+			}
+			else if (strcmp(parsedInput, "4") == 0)
+			{
+				sendText(latest_conn, "Four!");
+			}
+			else if (strcmp(parsedInput, "5") == 0)
+			{
+				char hostname[255];
+				gethostname(hostname, sizeof(hostname));
+				sendText(latest_conn, hostname);
+			}
+			else if (strcmp(parsedInput, "passwd") == 0)
+			{
+				sendText(latest_conn, "Future password functionality");
+			}
+			else if (strcmp(parsedInput, "exit") == 0)
+			{
+				sendText(latest_conn, "Disconnecting User...");
+				getpeername(latest_conn, (struct sockaddr*) & address, (socklen_t*)&addrlen);
+				std::cout << "Client disconnected from IP: " << inet_ntoa(address.sin_addr) << " Port: " << ntohs(address.sin_port) << "\n",
+					//Close the file descriptor and mark the connection index for re-use
+					close(latest_conn);
+				client_sockets[i] = 0;
+			}
+			else if (strcmp(parsedInput, "menu") == 0)
+			{
+				sendMenu(latest_conn);
+			}
+			else {
+				sendText(latest_conn, "Invalid Command: type menu for options");
+			}
+			parsedInput = strtok(NULL, "\n");
+		}
+	}
 }
 
 /**********************************************************************************************
@@ -143,4 +231,5 @@ void TCPServer::listenSvr() {
  **********************************************************************************************/
 
 void TCPServer::shutdown() {
+	close(server_socket);
 }

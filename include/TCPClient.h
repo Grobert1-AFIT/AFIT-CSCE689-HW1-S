@@ -3,10 +3,11 @@
 
 #include <string>
 #include "Client.h"
+#include "Server.h"
 
 // The amount to read in before we send a packet
 const unsigned int stdin_bufsize = 50;
-const unsigned int socket_bufsize = 100;
+const unsigned int socket_bufsize = 1024;
 
 class TCPClient : public Client
 {
@@ -20,6 +21,8 @@ public:
    virtual void closeConn();
 
 private:
+	int sock = 0, valread;
+	struct sockaddr_in serv_addr;
 
 };
 

@@ -14,7 +14,6 @@
 #include <cstring>
 #include <string>
 #include <sstream>
-#include "ActiveConn.h"
 
 /******************************************************************************************
  * Server - Parent class for student's TCP server
