@@ -67,17 +67,26 @@ void TCPClient::handleConnection() {
 	fd_set read_set;
 	struct timeval timeout;
 	int readData;
+	int waiting = 1; //Waiting for server response?
 
-	timeout.tv_sec = 10; // Time out after a minute
+	timeout.tv_sec = 2; //Wait 2 second between reads
 	timeout.tv_usec = 0;
 
 	while (true) {
-		char* rawInput = 0;
-		std::cout << "Input message to send to server:\n";
-		fgets(input, stdin_bufsize, stdin);
-		send(sock, input, strlen(input), 0);
 		FD_ZERO(&read_set);
 		FD_SET(sock, &read_set);
+		if (waiting == 0) {
+			std::cout << "Input message to send to server:\n";
+			fgets(input, stdin_bufsize, stdin);
+			//Ignore empty strings
+			if (strlen(input) != 1) {
+				send(sock, input, strlen(input), 0);
+				waiting = 1; //Data sent - wait for response
+			}
+			else {
+				std::cout << "Nothing Entered\n";
+			}
+		}
 
 		int readData = select(sock + 1, &read_set, NULL, NULL, &timeout);
 
@@ -87,16 +96,17 @@ void TCPClient::handleConnection() {
 		}
 
 		if (readData == 0) {
-			std::cout << "Timeout waiting for server";
-			perror("Disconnected from server");
-			exit(EXIT_FAILURE);
 		}
 
 		if (readData > 0) {
 			valread = read(sock, output, socket_bufsize);
+			std::cout << std::flush;
 			printf("%s\n", output);
+			waiting = 0; //Read Data
 		}
+
 		if (strcmp("exit\n", input) == 0) { break; }
+
 		//reset things between loops
 		std::cout << std::flush;
 		memset(output, 0, sizeof output);
@@ -118,6 +128,7 @@ void TCPClient::handleConnection() {
  **********************************************************************************************/
 
 void TCPClient::closeConn() {
+	close(sock);
 }
 
 

@@ -106,14 +106,8 @@ void TCPServer::listenSvr() {
 				exit(EXIT_FAILURE);
 			}
 
-			const char* message = "Welcome to the Server";
-
 			std::cout << "User connected from IP: " << inet_ntoa(address.sin_addr) << " Port: " << ntohs(address.sin_port) << "\n";
-			/*if (send(incoming_conn, message, strlen(message), 0) != strlen(message))
-			{
-				perror("Failure to send welcome message");
-			}
-			*/
+			sendMenu(incoming_conn);
 
 			for (int i = 0; i < num_clients; i++)
 			{
@@ -158,11 +152,12 @@ void TCPServer::handleInput(int latest_conn, int i) {
 	else
 	{
 		char* parsedInput;
+		char* outputStr;
 		read_buffer[read_msg] = '\0';
 		//remove newlines from client messages
 		parsedInput = strtok(read_buffer, "\n");
 		while (parsedInput != NULL) {
-			if (strcmp(parsedInput, "hello\n") == 0)
+			if (strcmp(parsedInput, "hello") == 0)
 			{
 				sendText(latest_conn, "Welcome to the Server");
 			}
